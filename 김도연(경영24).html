@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>NameDraw Pro</title>
+<style>
+body { font-family: Arial; padding:20px; }
+textarea { width:100%; height:100px; }
+button { margin:5px; padding:8px; }
+.container { display:flex; gap:20px; }
+.list { border:1px solid #ccc; padding:10px; width:45%; min-height:200px;}
+.result { font-size:24px; margin:10px 0; color:blue; }
+</style>
+</head>
+<body>
+
+<h2 id="title">이름 추첨 프로그램</h2>
+
+<!-- 언어 선택 -->
+<select onchange="changeLang(this.value)">
+<option value="ko">한국어</option>
+<option value="en">English</option>
+<option value="zh">中文</option>
+<option value="ja">日本語</option>
+</select>
+
+<h3>명단 입력</h3>
+<textarea id="input"></textarea><br>
+<button onclick="loadNames()">명단 불러오기</button>
+<button onclick="removeDuplicates()">중복 제거</button>
+
+<h3>추첨 설정</h3>
+<input type="number" id="count" value="1" min="1">
+
+<button onclick="startDraw()">추첨 시작</button>
+<button onclick="redraw()">재추첨</button>
+
+<div class="result" id="result">결과</div>
+
+<div class="container">
+<div class="list">
+<h3>추첨 대상</h3>
+<ul id="candidates"></ul>
+</div>
+
+<div class="list">
+<h3>당첨자</h3>
+<ul id="winners"></ul>
+</div>
+</div>
+
+<br>
+<input type="text" id="search" placeholder="검색" oninput="filterList()">
+
+<br><br>
+<button onclick="resetAll()">전체 초기화</button>
+<button onclick="resetOriginal()">원본 복구</button>
+<button onclick="downloadCSV()">CSV 다운로드</button>
+
+<footer>
+<hr>
+작성자: 김도연(경영24)
+</footer>
+
+<script>
+let allNames = [];
+let originalNames = [];
+let candidates = [];
+let winners = [];
+
+const lang = {
+ko: {title:"이름 추첨 프로그램"},
+en: {title:"Name Draw App"},
+zh: {title:"抽签程序"},
+ja: {title:"名前抽選アプリ"}
+};
+
+function changeLang(l){
+document.getElementById("title").innerText = lang[l].title;
+}
+
+function loadNames(){
+let input = document.getElementById("input").value;
+allNames = input.split(/\n|\t/).filter(n=>n.trim()!="");
+originalNames = [...allNames];
+candidates = [...allNames];
+winners = [];
+render();
+}
+
+function render(){
+let c = document.getElementById("candidates");
+let w = document.getElementById("winners");
+c.innerHTML = "";
+w.innerHTML = "";
+
+candidates.forEach(name=>{
+let li = document.createElement("li");
+li.innerText = name;
+c.appendChild(li);
+});
+
+winners.forEach(name=>{
+let li = document.createElement("li");
+li.innerText = name;
+li.onclick = ()=>moveBack(name);
+w.appendChild(li);
+});
+}
+
+function draw(names,count){
+let shuffled = [...names].sort(()=>Math.random()-0.5);
+return shuffled.slice(0,count);
+}
+
+function startDraw(){
+let count = parseInt(document.getElementById("count").value);
+if(candidates.length === 0) return;
+
+let interval = setInterval(()=>{
+let rand = candidates[Math.floor(Math.random()*candidates.length)];
+document.getElementById("result").innerText = rand;
+},100);
+
+setTimeout(()=>{
+clearInterval(interval);
+let selected = draw(candidates,count);
+selected.forEach(n=>{
+winners.push(n);
+candidates = candidates.filter(c=>c!==n);
+});
+document.getElementById("result").innerText = selected.join(", ");
+render();
+},2000);
+}
+
+function redraw(){
+startDraw();
+}
+
+function moveBack(name){
+winners = winners.filter(n=>n!==name);
+candidates.push(name);
+render();
+}
+
+function resetAll(){
+candidates=[];
+winners=[];
+render();
+}
+
+function resetOriginal(){
+candidates=[...originalNames];
+winners=[];
+render();
+}
+
+function filterList(){
+let keyword = document.getElementById("search").value.toLowerCase();
+let items = document.querySelectorAll("#candidates li");
+items.forEach(li=>{
+li.style.display = li.innerText.toLowerCase().includes(keyword) ? "" : "none";
+});
+}
+
+function removeDuplicates(){
+candidates = [...new Set(candidates)];
+render();
+}
+
+function downloadCSV(){
+let csv = winners.join(",");
+let blob = new Blob([csv], {type:"text/csv"});
+let a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = "winners.csv";
+a.click();
+}
+</script>
+
+</body>
+</html>
